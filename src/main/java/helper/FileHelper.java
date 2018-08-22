@@ -43,9 +43,11 @@ public class FileHelper {
 
         try (BufferedReader br = new BufferedReader(new FileReader(unsortedFile))) {
             for (int i = 0; i < amountOfFiles; i++) {
-                String filePath = pathToPartsOfFile + "file" + i + ".txt";
+                File file = new File(pathToPartsOfFile + "file" + i + ".txt");
                 list = new ArrayList<>();
-                Files.createFile(Paths.get(filePath));
+                Files.createFile(Paths.get(file.getPath()));
+                file.getParentFile().deleteOnExit();
+                file.deleteOnExit();
 
                 for (int j = 0; j < amountOfStringsPerFile; j++) {
                     line = br.readLine();
@@ -54,9 +56,10 @@ public class FileHelper {
                     list.add(line);
                 }
                 Collections.sort(list);
-                writeToFile(filePath, list);
+                writeToFile(file.getPath(), list);
             }
         }
+
     }
 
     // function for count strings in file
