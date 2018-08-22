@@ -10,8 +10,18 @@ public class MergeOfFiles implements AutoCloseable {
 
     public MergeOfFiles(String dirPath, String fileName) {
         try {
-            Files.createDirectory(Paths.get(dirPath));
+            if (!(new File(dirPath).exists())) {
+                Files.createDirectory(Paths.get(dirPath));
+            } else {
+                File file = new File(dirPath);
+                if (file.list().length != 0) {
+                    File[] files = file.listFiles();
+                    for (File f : files)
+                        f.delete();
+                }
+            }
             Files.createFile(Paths.get(dirPath + fileName));
+
             fw = new FileWriter(dirPath + fileName, true);
         } catch (IOException ex) {
             ex.printStackTrace();

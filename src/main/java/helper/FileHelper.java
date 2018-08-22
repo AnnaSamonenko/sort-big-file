@@ -63,7 +63,7 @@ public class FileHelper {
     }
 
     // function for count strings in file
-    private static int countAmountOfLine(String pathToUnsortedFile) {
+    private static int countAmountOfLine(String pathToUnsortedFile) throws IOException {
         File file = new File(pathToUnsortedFile);
         String line;
         int amountOfLine = 0;
@@ -73,7 +73,7 @@ public class FileHelper {
                 amountOfLine++;
             }
         } catch (IOException ex) {
-            ex.printStackTrace();
+            throw new IOException(ex.getMessage());
         }
         return amountOfLine;
     }
