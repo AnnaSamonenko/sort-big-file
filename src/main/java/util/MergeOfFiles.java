@@ -5,40 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-class Wrapper {
-    private BufferedReader br;
-    private String line;
-
-    Wrapper(File file) {
-        try {
-            br = new BufferedReader(new FileReader(file));
-            line = br.readLine();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    void nextLine() {
-        try {
-            line = br.readLine();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    String getLine() {
-        return line;
-    }
-
-    void close() {
-        try {
-            br.close();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-}
-
 public class MergeOfFiles implements AutoCloseable {
     private FileWriter fw;
 
