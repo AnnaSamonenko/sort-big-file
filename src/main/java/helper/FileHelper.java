@@ -59,11 +59,10 @@ public class FileHelper {
                 writeToFile(file.getPath(), list);
             }
         }
-
     }
 
     // function for count strings in file
-    private static int countAmountOfLine(String pathToUnsortedFile) throws IOException {
+    public static int countAmountOfLine(String pathToUnsortedFile) throws IOException {
         File file = new File(pathToUnsortedFile);
         String line;
         int amountOfLine = 0;
@@ -79,7 +78,7 @@ public class FileHelper {
     }
 
     // write content of list to a file
-    private static void writeToFile(String filePath, List<String> sortedContent) {
+    public static void writeToFile(String filePath, List<String> sortedContent) {
         Path out = Paths.get(filePath);
         try {
             Files.write(out, sortedContent, Charset.defaultCharset());
@@ -89,7 +88,7 @@ public class FileHelper {
     }
 
     // convert Bytes in MB
-    private static double convertBytesInMB(long sizeInBytes) {
+    public static double convertBytesInMB(long sizeInBytes) {
         return sizeInBytes / (double) MEGABYTE;
     }
 }
