@@ -1,7 +1,5 @@
 package helper;
 
-import helper.FileHelper;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -22,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class FileHelperInParallel implements AutoCloseable {
 
     private int sizeInMB = 100;
+    private static int amountOfThreads;
     private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>();
     private Semaphore semaphore = new Semaphore(2);
     private BufferedReader br;
@@ -39,7 +38,7 @@ public class FileHelperInParallel implements AutoCloseable {
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLines(pathToBigFile) /
                 amountOfFiles);
         long freeMemoryInBytes = Runtime.getRuntime().maxMemory();
-        int amountOfThreads = (int) FileHelper.convertBytesInMB(freeMemoryInBytes) / 300;
+        amountOfThreads = (int) FileHelper.convertBytesInMB(freeMemoryInBytes) / 300;
         countDownLatch = new CountDownLatch(amountOfThreads);
     }
 
@@ -47,44 +46,26 @@ public class FileHelperInParallel implements AutoCloseable {
     public CountDownLatch runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
         Files.createDirectory(Paths.get(pathToPartsOfFile));
 
-        Thread prod = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    producer();
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-
+        Runnable producer = () -> {
+            try {
+                producer();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
             }
-        });
+        };
 
-        Thread consumer1 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    consumer(pathToPartsOfFile, "file");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
+        Runnable consumer = () -> {
+            try {
+                consumer(pathToPartsOfFile, "file");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        });
+        };
 
-        Thread consumer2 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    consumer(pathToPartsOfFile, "file");
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
+        (new Thread(producer)).start();
+        for (int i = 0; i < amountOfThreads; i++)
+            (new Thread(consumer)).start();
 
-        prod.start();
-        consumer1.start();
-        consumer2.start();
         return countDownLatch;
     }
 
@@ -116,19 +97,17 @@ public class FileHelperInParallel implements AutoCloseable {
     }
 
     private void consumer(String pathToParts, String fileName) throws InterruptedException {
-        while (flag.get() || blockingQueue.size() != 0) {
+        while (flag.get() || !blockingQueue.isEmpty()) {
             semaphore.acquire();
             if (!blockingQueue.isEmpty()) {
                 try {
                     List<String> list = blockingQueue.takeLast();
                     Collections.sort(list);
                     Path out = Paths.get(pathToParts + "/" + fileName + (new Random().nextInt()));
-                    try {
-                        Files.write(out, list, Charset.defaultCharset());
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
+                    Files.write(out, list, Charset.defaultCharset());
                 } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             }
