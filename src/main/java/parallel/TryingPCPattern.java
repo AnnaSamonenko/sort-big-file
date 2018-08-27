@@ -85,18 +85,6 @@ public class TryingPCPattern implements AutoCloseable {
             }
         });
 
-        Thread consumer3 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    consumer(pathToPartsOfFile, "file");
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-
-            }
-        });
-
         prod.start();
         consumer1.start();
         consumer2.start();
