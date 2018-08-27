@@ -31,14 +31,13 @@ public class TryingPCPattern implements AutoCloseable {
     private CountDownLatch countDownLatch;
 
 
-    public TryingPCPattern(String pathToBigFile, CountDownLatch countDownLatch) throws IOException {
+    public TryingPCPattern(String pathToBigFile) throws IOException {
         File unsortedFile;
         br = new BufferedReader(new FileReader(pathToBigFile));
         unsortedFile = new File(pathToBigFile);
         amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / sizeInMB);
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLine(pathToBigFile) /
                 amountOfFiles);
-        this.countDownLatch = countDownLatch;
     }
 
     @Override
@@ -46,8 +45,12 @@ public class TryingPCPattern implements AutoCloseable {
         br.close();
     }
 
-    public void runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
+    public CountDownLatch runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
         Files.createDirectory(Paths.get(pathToPartsOfFile));
+
+        long freeMemoryInBytes = Runtime.getRuntime().maxMemory();
+        int amountOfThreads = (int) FileHelper.convertBytesInMB(freeMemoryInBytes) / 300;
+        countDownLatch = new CountDownLatch(amountOfThreads);
 
         Thread prod = new Thread(new Runnable() {
             @Override
@@ -81,13 +84,13 @@ public class TryingPCPattern implements AutoCloseable {
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
                 }
-
             }
         });
 
         prod.start();
         consumer1.start();
         consumer2.start();
+        return countDownLatch;
     }
 
     private void producer() throws InterruptedException {
