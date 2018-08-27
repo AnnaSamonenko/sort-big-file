@@ -19,9 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileHelperInParallel implements AutoCloseable {
 
-    private int sizeInMB = 100;
-    private static int amountOfThreads;
+    private static final int SIZE_OF_SMALL_FILES_IN_MB = 100;
     private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>();
+    private static int amountOfThreads;
     private Semaphore semaphore = new Semaphore(2);
     private BufferedReader br;
     private double amountOfFiles;
@@ -29,19 +29,17 @@ public class FileHelperInParallel implements AutoCloseable {
     private AtomicBoolean flag = new AtomicBoolean(true);
     private CountDownLatch countDownLatch;
 
-
     public FileHelperInParallel(String pathToBigFile) throws IOException {
         File unsortedFile;
         br = new BufferedReader(new FileReader(pathToBigFile));
         unsortedFile = new File(pathToBigFile);
-        amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / sizeInMB);
+        amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / SIZE_OF_SMALL_FILES_IN_MB);
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLines(pathToBigFile) /
                 amountOfFiles);
         long freeMemoryInBytes = Runtime.getRuntime().maxMemory();
         amountOfThreads = (int) FileHelper.convertBytesInMB(freeMemoryInBytes) / 300;
         countDownLatch = new CountDownLatch(amountOfThreads);
     }
-
 
     public CountDownLatch runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
         Files.createDirectory(Paths.get(pathToPartsOfFile));
@@ -74,10 +72,8 @@ public class FileHelperInParallel implements AutoCloseable {
             semaphore.acquire();
             if (blockingQueue.size() < 2) {
                 try {
-
                     String line;
                     List<String> list = new ArrayList<>();
-
                     for (int j = 0; j < amountOfStringsPerFile; j++) {
                         line = br.readLine();
                         if (line == null) {

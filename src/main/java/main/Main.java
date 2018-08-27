@@ -17,6 +17,7 @@ public class Main {
     private static final String FILE_SORTED = "sorted.txt";
 
     public static void main(String[] args) throws Exception {
+
         long startTime = System.nanoTime();
 
         try (FileHelperInParallel fileHelperIP = new FileHelperInParallel(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {

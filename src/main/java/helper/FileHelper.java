@@ -26,7 +26,7 @@ public class FileHelper {
         }
     }
 
-    public static int countAmountOfLines(String pathToUnsortedFile) throws IOException {
+    static int countAmountOfLines(String pathToUnsortedFile) throws IOException {
         File file = new File(pathToUnsortedFile);
         String line;
         int amountOfLine = 0;
@@ -40,8 +40,8 @@ public class FileHelper {
         }
         return amountOfLine;
     }
-    
-    public static double convertBytesInMB(long sizeInBytes) {
+
+    static double convertBytesInMB(long sizeInBytes) {
         return sizeInBytes / (double) MEGABYTE;
     }
 }
