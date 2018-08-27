@@ -1,4 +1,4 @@
-package parallel;
+package helper;
 
 import helper.FileHelper;
 
@@ -19,38 +19,33 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class TryingPCPattern implements AutoCloseable {
+public class FileHelperInParallel implements AutoCloseable {
 
-    private static int sizeInMB = 100;
+    private int sizeInMB = 100;
     private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>();
     private Semaphore semaphore = new Semaphore(2);
     private BufferedReader br;
-    double amountOfFiles;
-    double amountOfStringsPerFile;
-    AtomicBoolean flag = new AtomicBoolean(true);
+    private double amountOfFiles;
+    private double amountOfStringsPerFile;
+    private AtomicBoolean flag = new AtomicBoolean(true);
     private CountDownLatch countDownLatch;
 
 
-    public TryingPCPattern(String pathToBigFile) throws IOException {
+    public FileHelperInParallel(String pathToBigFile) throws IOException {
         File unsortedFile;
         br = new BufferedReader(new FileReader(pathToBigFile));
         unsortedFile = new File(pathToBigFile);
         amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / sizeInMB);
-        amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLine(pathToBigFile) /
+        amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLines(pathToBigFile) /
                 amountOfFiles);
-    }
-
-    @Override
-    public void close() throws IOException {
-        br.close();
-    }
-
-    public CountDownLatch runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
-        Files.createDirectory(Paths.get(pathToPartsOfFile));
-
         long freeMemoryInBytes = Runtime.getRuntime().maxMemory();
         int amountOfThreads = (int) FileHelper.convertBytesInMB(freeMemoryInBytes) / 300;
         countDownLatch = new CountDownLatch(amountOfThreads);
+    }
+
+
+    public CountDownLatch runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
+        Files.createDirectory(Paths.get(pathToPartsOfFile));
 
         Thread prod = new Thread(new Runnable() {
             @Override
@@ -140,5 +135,10 @@ public class TryingPCPattern implements AutoCloseable {
             semaphore.release();
         }
         countDownLatch.countDown();
+    }
+
+    @Override
+    public void close() throws IOException {
+        br.close();
     }
 }

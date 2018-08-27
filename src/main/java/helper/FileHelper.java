@@ -13,7 +13,6 @@ public class FileHelper {
     private FileHelper() {
     }
 
-    // standalone big file generator
     public static void generateBigFile(String path, String fileName, int sizeInMB) throws IOException {
         Files.createDirectory(Paths.get(path));
         Files.createFile(Paths.get(path + fileName));
@@ -27,8 +26,7 @@ public class FileHelper {
         }
     }
 
-    // function for count strings in file
-    public static int countAmountOfLine(String pathToUnsortedFile) throws IOException {
+    public static int countAmountOfLines(String pathToUnsortedFile) throws IOException {
         File file = new File(pathToUnsortedFile);
         String line;
         int amountOfLine = 0;
@@ -42,8 +40,7 @@ public class FileHelper {
         }
         return amountOfLine;
     }
-
-    // convert Bytes in MB
+    
     public static double convertBytesInMB(long sizeInBytes) {
         return sizeInBytes / (double) MEGABYTE;
     }
