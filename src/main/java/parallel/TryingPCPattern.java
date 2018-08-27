@@ -16,89 +16,138 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TryingPCPattern implements AutoCloseable {
 
     private static int sizeInMB = 100;
-    private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>(3);
-    private CountDownLatch countDownLatch;
+    private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>();
+    private Semaphore semaphore = new Semaphore(2);
     private BufferedReader br;
     double amountOfFiles;
     double amountOfStringsPerFile;
     AtomicBoolean flag = new AtomicBoolean(true);
+    private CountDownLatch countDownLatch;
 
 
-    public TryingPCPattern(String pathToBigFile) throws IOException {
+    public TryingPCPattern(String pathToBigFile, CountDownLatch countDownLatch) throws IOException {
         File unsortedFile;
         br = new BufferedReader(new FileReader(pathToBigFile));
         unsortedFile = new File(pathToBigFile);
         amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / sizeInMB);
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLine(pathToBigFile) /
                 amountOfFiles);
+        this.countDownLatch = countDownLatch;
     }
 
     @Override
     public void close() throws IOException {
-        // br.close();
+        br.close();
     }
 
     public void runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
         Files.createDirectory(Paths.get(pathToPartsOfFile));
 
-        Thread th1 = new Thread(new Runnable() {
+        Thread prod = new Thread(new Runnable() {
             @Override
             public void run() {
-                producer();
-            }
-        });
-
-        Thread th2 = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                consumer(pathToPartsOfFile, "file");
-            }
-        });
-
-        th1.start();
-        th2.start();
-    }
-
-    private void producer() {
-        while (flag.get()) {
-            try {
-                String line;
-                List<String> list = new ArrayList<>();
-
-                for (int j = 0; j < amountOfStringsPerFile; j++) {
-                    line = br.readLine();
-                    if (line == null) {
-                        flag.set(false);
-                        break;
-                    }
-                    list.add(line);
-                }
-                blockingQueue.add(list);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    private void consumer(String pathToParts, String fileName) {
-        while (flag.get()) {
-            try {
-                List<String> list = blockingQueue.takeLast();
-                Collections.sort(list);
-                Path out = Paths.get(pathToParts + "/" + fileName + (new Random().nextInt()));
                 try {
-                    Files.write(out, list, Charset.defaultCharset());
+                    producer();
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+
+            }
+        });
+
+        Thread consumer1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    consumer(pathToPartsOfFile, "file");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        });
+
+        Thread consumer2 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    consumer(pathToPartsOfFile, "file");
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+
+            }
+        });
+
+        Thread consumer3 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    consumer(pathToPartsOfFile, "file");
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+
+            }
+        });
+
+        prod.start();
+        consumer1.start();
+        consumer2.start();
+    }
+
+    private void producer() throws InterruptedException {
+        while (flag.get()) {
+            semaphore.acquire();
+            if (blockingQueue.size() < 2) {
+                try {
+
+                    String line;
+                    List<String> list = new ArrayList<>();
+
+                    for (int j = 0; j < amountOfStringsPerFile; j++) {
+                        line = br.readLine();
+                        if (line == null) {
+                            flag.set(false);
+                            break;
+                        }
+                        list.add(line);
+                    }
+                    blockingQueue.add(list);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
             }
+            semaphore.release();
         }
+        countDownLatch.countDown();
+    }
+
+    private void consumer(String pathToParts, String fileName) throws InterruptedException {
+        while (flag.get() || blockingQueue.size() != 0) {
+            semaphore.acquire();
+            if (!blockingQueue.isEmpty()) {
+                try {
+                    List<String> list = blockingQueue.takeLast();
+                    Collections.sort(list);
+                    Path out = Paths.get(pathToParts + "/" + fileName + (new Random().nextInt()));
+                    try {
+                        Files.write(out, list, Charset.defaultCharset());
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            semaphore.release();
+        }
+        countDownLatch.countDown();
     }
 }
