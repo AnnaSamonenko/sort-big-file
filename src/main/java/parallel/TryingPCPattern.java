@@ -13,21 +13,24 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TryingPCPattern implements AutoCloseable {
 
     private static int sizeInMB = 100;
-    private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>(10);
+    private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>(3);
     private CountDownLatch countDownLatch;
     private BufferedReader br;
-    File unsortedFile;
     double amountOfFiles;
     double amountOfStringsPerFile;
+    AtomicBoolean flag = new AtomicBoolean(true);
 
 
     public TryingPCPattern(String pathToBigFile) throws IOException {
+        File unsortedFile;
         br = new BufferedReader(new FileReader(pathToBigFile));
         unsortedFile = new File(pathToBigFile);
         amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / sizeInMB);
@@ -37,10 +40,10 @@ public class TryingPCPattern implements AutoCloseable {
 
     @Override
     public void close() throws IOException {
-        br.close();
+        // br.close();
     }
 
-    public void runDivideAndSortInParallel(String pathToPartsOfFile, String pathToUnsortedFile, int sizeInMB) throws IOException {
+    public void runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
         Files.createDirectory(Paths.get(pathToPartsOfFile));
 
         Thread th1 = new Thread(new Runnable() {
@@ -48,48 +51,54 @@ public class TryingPCPattern implements AutoCloseable {
             public void run() {
                 producer();
             }
-        }).start();
+        });
 
         Thread th2 = new Thread(new Runnable() {
             @Override
             public void run() {
                 consumer(pathToPartsOfFile, "file");
             }
-        }).start();
+        });
 
+        th1.start();
+        th2.start();
     }
 
     private void producer() {
-        try {
-            String line;
-            List<String> list = new ArrayList<>();
-
-            for (int j = 0; j < amountOfStringsPerFile; j++) {
-                line = br.readLine();
-                if (line == null)
-                    break;
-                list.add(line);
-            }
-            blockingQueue.add(list);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
-    }
-
-    private void consumer(String pathToParts, String fileName) {
-        try {
-            List<String> list = blockingQueue.takeLast();
-            Collections.sort(list);
-            Path out = Paths.get(pathToParts + "/" + fileName);
+        while (flag.get()) {
             try {
-                Files.write(out, list, Charset.defaultCharset());
+                String line;
+                List<String> list = new ArrayList<>();
+
+                for (int j = 0; j < amountOfStringsPerFile; j++) {
+                    line = br.readLine();
+                    if (line == null) {
+                        flag.set(false);
+                        break;
+                    }
+                    list.add(line);
+                }
+                blockingQueue.add(list);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
         }
+    }
 
+    private void consumer(String pathToParts, String fileName) {
+        while (flag.get()) {
+            try {
+                List<String> list = blockingQueue.takeLast();
+                Collections.sort(list);
+                Path out = Paths.get(pathToParts + "/" + fileName + (new Random().nextInt()));
+                try {
+                    Files.write(out, list, Charset.defaultCharset());
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }

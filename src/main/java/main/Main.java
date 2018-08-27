@@ -31,7 +31,7 @@ public class Main {
 //        }
 
         try (TryingPCPattern tr = new TryingPCPattern(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
-
+            tr.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
