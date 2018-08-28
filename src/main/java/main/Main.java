@@ -23,7 +23,7 @@ public class Main {
         try (FileHelperInParallel fileHelperIP = new FileHelperInParallel(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
             (fileHelperIP.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
         } catch (IOException ex) {
-            System.out.println("Some exception occurs during merge of files");
+            System.out.println("Some exception occurs during division of file");
             return;
         }
 

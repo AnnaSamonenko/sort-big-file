@@ -19,26 +19,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileHelperInParallel implements AutoCloseable {
 
-    private static final int SIZE_OF_SMALL_FILES_IN_MB = 100;
     private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>();
-    private static int amountOfThreads;
-    private Semaphore semaphore = new Semaphore(2);
-    private BufferedReader br;
-    private double amountOfFiles;
-    private double amountOfStringsPerFile;
-    private AtomicBoolean flag = new AtomicBoolean(true);
+
+    private static final int SIZE_OF_SMALL_FILES_IN_MB = 100;
+    private static final int AMOUNT_OF_CONSUMER_THREADS = 2;
+
+    private Semaphore semaphore;
     private CountDownLatch countDownLatch;
+    private AtomicBoolean flag;
+
+    private BufferedReader br;
+    private double amountOfStringsPerFile;
 
     public FileHelperInParallel(String pathToBigFile) throws IOException {
-        File unsortedFile;
+        File unsortedFile = new File(pathToBigFile);
         br = new BufferedReader(new FileReader(pathToBigFile));
-        unsortedFile = new File(pathToBigFile);
-        amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / SIZE_OF_SMALL_FILES_IN_MB);
+        double amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / SIZE_OF_SMALL_FILES_IN_MB);
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLines(pathToBigFile) /
                 amountOfFiles);
-        long freeMemoryInBytes = Runtime.getRuntime().maxMemory();
-        amountOfThreads = (int) FileHelper.convertBytesInMB(freeMemoryInBytes) / 300;
-        countDownLatch = new CountDownLatch(amountOfThreads);
+        semaphore = new Semaphore(AMOUNT_OF_CONSUMER_THREADS);
+        countDownLatch = new CountDownLatch(AMOUNT_OF_CONSUMER_THREADS + 1);
+        flag = new AtomicBoolean(true);
     }
 
     public CountDownLatch runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
@@ -61,7 +62,7 @@ public class FileHelperInParallel implements AutoCloseable {
         };
 
         (new Thread(producer)).start();
-        for (int i = 0; i < amountOfThreads; i++)
+        for (int i = 0; i < AMOUNT_OF_CONSUMER_THREADS; i++)
             (new Thread(consumer)).start();
 
         return countDownLatch;
