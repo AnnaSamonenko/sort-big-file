@@ -28,7 +28,7 @@ public class Main {
         }
 
         try (MergeOfFiles mergeOfFiles = new MergeOfFiles(DIR_FOR_SORTED_BIG_FILE, FILE_SORTED)) {
-            mergeOfFiles.merge(DIR_FOR_FILE_PARTS);
+            (mergeOfFiles.mergeInParallel(DIR_FOR_FILE_PARTS)).await();
         } catch (IOException e) {
             System.out.println("Some exception occurs during merge of files");
             return;

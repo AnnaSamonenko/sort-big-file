@@ -19,14 +19,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileHelperInParallel implements AutoCloseable {
 
-    private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>();
+    private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>(3);
 
     private static final int SIZE_OF_SMALL_FILES_IN_MB = 100;
-    private static final int AMOUNT_OF_CONSUMER_THREADS = 2;
+    private static final int AMOUNT_OF_CONSUMER_THREADS = 3;
 
-    private Semaphore semaphore;
-    private CountDownLatch countDownLatch;
-    private AtomicBoolean flag;
+    private Semaphore semaphore = new Semaphore(2);
+    private CountDownLatch countDownLatch = new CountDownLatch(AMOUNT_OF_CONSUMER_THREADS + 1);
+    private AtomicBoolean flag = new AtomicBoolean(true);
 
     private BufferedReader br;
     private double amountOfStringsPerFile;
@@ -36,9 +36,6 @@ public class FileHelperInParallel implements AutoCloseable {
         double amountOfFiles = Math.ceil(FileHelper.convertBytesInMB((new File(pathToBigFile)).length()) / SIZE_OF_SMALL_FILES_IN_MB);
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLines(pathToBigFile) /
                 amountOfFiles);
-        semaphore = new Semaphore(AMOUNT_OF_CONSUMER_THREADS);
-        countDownLatch = new CountDownLatch(AMOUNT_OF_CONSUMER_THREADS + 1);
-        flag = new AtomicBoolean(true);
     }
 
     public CountDownLatch runDivideAndSortInParallel(String pathToPartsOfFile) throws IOException {
@@ -54,7 +51,7 @@ public class FileHelperInParallel implements AutoCloseable {
 
         Runnable consumer = () -> {
             try {
-                consumer(pathToPartsOfFile, "file");
+                consumer(pathToPartsOfFile);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -92,14 +89,14 @@ public class FileHelperInParallel implements AutoCloseable {
         countDownLatch.countDown();
     }
 
-    private void consumer(String pathToParts, String fileName) throws InterruptedException {
+    private void consumer(String pathToParts) throws InterruptedException {
         while (flag.get() || !blockingQueue.isEmpty()) {
             semaphore.acquire();
             if (!blockingQueue.isEmpty()) {
                 try {
                     List<String> list = blockingQueue.takeLast();
                     Collections.sort(list);
-                    Path out = Paths.get(pathToParts + "/" + fileName + (new Random().nextInt()));
+                    Path out = Paths.get(pathToParts + "/" + "file" + (new Random().nextInt()));
                     Files.write(out, list, Charset.defaultCharset());
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
