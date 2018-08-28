@@ -1,4 +1,6 @@
-package helper;
+package split;
+
+import common.FileHelper;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,7 +19,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class FileHelperInParallel implements AutoCloseable {
+public class SplitHelper implements AutoCloseable {
 
     private LinkedBlockingDeque<List<String>> blockingQueue = new LinkedBlockingDeque<>(3);
 
@@ -31,7 +33,7 @@ public class FileHelperInParallel implements AutoCloseable {
     private BufferedReader br;
     private double amountOfStringsPerFile;
 
-    public FileHelperInParallel(String pathToBigFile) throws IOException {
+    public SplitHelper(String pathToBigFile) throws IOException {
         br = new BufferedReader(new FileReader(pathToBigFile));
         double amountOfFiles = Math.ceil(FileHelper.convertBytesInMB((new File(pathToBigFile)).length()) / SIZE_OF_SMALL_FILES_IN_MB);
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLines(pathToBigFile) /

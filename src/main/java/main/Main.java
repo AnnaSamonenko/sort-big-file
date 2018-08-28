@@ -1,6 +1,6 @@
 package main;
 
-import util.MergeOfFiles;
+import merge.MergeHelper;
 
 import java.io.IOException;
 
@@ -19,15 +19,15 @@ public class Main {
 
         long startTime = System.nanoTime();
 
-//        try (FileHelperInParallel fileHelperIP = new FileHelperInParallel(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
+//        try (SplitHelper fileHelperIP = new SplitHelper(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
 //            (fileHelperIP.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
 //        } catch (IOException ex) {
 //            System.out.println("Some exception occurs during division of file");
 //            return;
 //        }
 
-        try (MergeOfFiles mergeOfFiles = new MergeOfFiles(DIR_FOR_SORTED_BIG_FILE, FILE_SORTED)) {
-            (mergeOfFiles.mergeInParallel(DIR_FOR_FILE_PARTS)).await();
+        try (MergeHelper mergeHelper = new MergeHelper(DIR_FOR_SORTED_BIG_FILE, FILE_SORTED)) {
+            (mergeHelper.mergeInParallel(DIR_FOR_FILE_PARTS)).await();
         } catch (IOException e) {
             System.out.println("Some exception occurs during merge of files");
             return;

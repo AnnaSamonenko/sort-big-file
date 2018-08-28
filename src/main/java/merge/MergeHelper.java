@@ -1,4 +1,4 @@
-package util;
+package merge;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -7,17 +7,16 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MergeOfFiles implements AutoCloseable {
+public class MergeHelper implements AutoCloseable {
     private FileWriter fw;
     private List<Wrapper> wrappers = new ArrayList<>();
     private static final int AMOUNT_OF_THREADS = 2;
     private CountDownLatch countDownLatch = new CountDownLatch(AMOUNT_OF_THREADS);
-    private Semaphore semaphore = new Semaphore(2);
     private AtomicBoolean flag = new AtomicBoolean(true);
 
     private BlockingDeque<String> blockingDeque = new LinkedBlockingDeque<>();
 
-    public MergeOfFiles(String dirPath, String fileName) {
+    public MergeHelper(String dirPath, String fileName) {
         try {
             if (!(new File(dirPath).exists())) {
                 Files.createDirectory(Paths.get(dirPath));
@@ -44,12 +43,14 @@ public class MergeOfFiles implements AutoCloseable {
             wrappers.add(new Wrapper(file));
 
         // producer
-        Runnable producer = () ->
-                producer();
+        Runnable producer = () -> {
+            producer();
+        };
 
         // consumer
-        Runnable consumer = () ->
-                consumer();
+        Runnable consumer = () -> {
+            consumer();
+        };
 
         (new Thread(producer)).start();
         (new Thread(consumer)).start();
@@ -61,7 +62,7 @@ public class MergeOfFiles implements AutoCloseable {
         Comparator<Wrapper> wrappersLineComparator = Comparator.comparing(Wrapper::getLine);
 
         while (!wrappers.isEmpty()) {
-            if (blockingDeque.size() < 20) {
+            if (blockingDeque.size() < 15) {
                 Collections.sort(wrappers, wrappersLineComparator);
                 Wrapper wr = wrappers.get(0);
                 blockingDeque.add(wr.getLine());

@@ -1,6 +1,4 @@
-package helper;
-
-import util.StringGenerator;
+package common;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -26,7 +24,7 @@ public class FileHelper {
         }
     }
 
-    static int countAmountOfLines(String pathToUnsortedFile) throws IOException {
+    public static int countAmountOfLines(String pathToUnsortedFile) throws IOException {
         File file = new File(pathToUnsortedFile);
         String line;
         int amountOfLine = 0;
@@ -41,7 +39,7 @@ public class FileHelper {
         return amountOfLine;
     }
 
-    static double convertBytesInMB(long sizeInBytes) {
+    public static double convertBytesInMB(long sizeInBytes) {
         return sizeInBytes / (double) MEGABYTE;
     }
 }
