@@ -1,6 +1,5 @@
 package main;
 
-import helper.FileHelperInParallel;
 import util.MergeOfFiles;
 
 import java.io.IOException;
@@ -20,12 +19,12 @@ public class Main {
 
         long startTime = System.nanoTime();
 
-        try (FileHelperInParallel fileHelperIP = new FileHelperInParallel(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
-            (fileHelperIP.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
-        } catch (IOException ex) {
-            System.out.println("Some exception occurs during division of file");
-            return;
-        }
+//        try (FileHelperInParallel fileHelperIP = new FileHelperInParallel(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
+//            (fileHelperIP.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
+//        } catch (IOException ex) {
+//            System.out.println("Some exception occurs during division of file");
+//            return;
+//        }
 
         try (MergeOfFiles mergeOfFiles = new MergeOfFiles(DIR_FOR_SORTED_BIG_FILE, FILE_SORTED)) {
             (mergeOfFiles.mergeInParallel(DIR_FOR_FILE_PARTS)).await();

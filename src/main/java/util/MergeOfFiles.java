@@ -4,14 +4,18 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MergeOfFiles implements AutoCloseable {
     private FileWriter fw;
-    private CopyOnWriteArrayList<Wrapper> wrappers = new CopyOnWriteArrayList<>();
+    private List<Wrapper> wrappers = new ArrayList<>();
     private static final int AMOUNT_OF_THREADS = 2;
     private CountDownLatch countDownLatch = new CountDownLatch(AMOUNT_OF_THREADS);
+    private Semaphore semaphore = new Semaphore(2);
+    private AtomicBoolean flag = new AtomicBoolean(true);
+
+    private BlockingDeque<String> blockingDeque = new LinkedBlockingDeque<>();
 
     public MergeOfFiles(String dirPath, String fileName) {
         try {
@@ -35,9 +39,13 @@ public class MergeOfFiles implements AutoCloseable {
 
     public CountDownLatch mergeInParallel(String pathToDir) {
 
+        File[] dir = (new File(pathToDir)).listFiles();
+        for (File file : dir)
+            wrappers.add(new Wrapper(file));
+
         // producer
         Runnable producer = () ->
-                producer(pathToDir);
+                producer();
 
         // consumer
         Runnable consumer = () ->
@@ -49,29 +57,34 @@ public class MergeOfFiles implements AutoCloseable {
         return countDownLatch;
     }
 
-    private void producer(String pathToDir) {
-        File[] dir = (new File(pathToDir)).listFiles();
-        for (File file : dir)
-            wrappers.add(new Wrapper(file));
+    private void producer() {
+        Comparator<Wrapper> wrappersLineComparator = Comparator.comparing(Wrapper::getLine);
+
+        while (!wrappers.isEmpty()) {
+            if (blockingDeque.size() < 20) {
+                Collections.sort(wrappers, wrappersLineComparator);
+                Wrapper wr = wrappers.get(0);
+                blockingDeque.add(wr.getLine());
+                wr.nextLine();
+                if (wr.getLine() == null) {
+                    wr.close();
+                    wrappers.remove(0);
+                }
+            }
+        }
+        if (wrappers.isEmpty())
+            flag.set(false);
         countDownLatch.countDown();
     }
 
     private void consumer() {
-        Comparator<Wrapper> wrappersLineComparator = Comparator.comparing(Wrapper::getLine);
-
-        while (!wrappers.isEmpty()) {
-            Collections.sort(wrappers, wrappersLineComparator);
-
-            Wrapper wr = wrappers.get(0);
-            try {
-                writeToFile(wr.getLine());
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-            wr.nextLine();
-            if (wr.getLine() == null) {
-                wr.close();
-                wrappers.remove(0);
+        while (flag.get() || !blockingDeque.isEmpty()) {
+            if (!blockingDeque.isEmpty()) {
+                try {
+                    writeToFile(blockingDeque.removeFirst());
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
             }
         }
         countDownLatch.countDown();
