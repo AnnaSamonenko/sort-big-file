@@ -32,9 +32,8 @@ public class FileHelperInParallel implements AutoCloseable {
     private double amountOfStringsPerFile;
 
     public FileHelperInParallel(String pathToBigFile) throws IOException {
-        File unsortedFile = new File(pathToBigFile);
         br = new BufferedReader(new FileReader(pathToBigFile));
-        double amountOfFiles = Math.ceil(FileHelper.convertBytesInMB(unsortedFile.length()) / SIZE_OF_SMALL_FILES_IN_MB);
+        double amountOfFiles = Math.ceil(FileHelper.convertBytesInMB((new File(pathToBigFile)).length()) / SIZE_OF_SMALL_FILES_IN_MB);
         amountOfStringsPerFile = Math.ceil(FileHelper.countAmountOfLines(pathToBigFile) /
                 amountOfFiles);
         semaphore = new Semaphore(AMOUNT_OF_CONSUMER_THREADS);
