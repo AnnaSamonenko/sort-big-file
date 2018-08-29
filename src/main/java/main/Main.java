@@ -20,12 +20,12 @@ public class Main {
 
         long startTime = System.nanoTime();
 
-//        try (SplitHelper splitHelper = new SplitHelper(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
-//            (splitHelper.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
-//        } catch (IOException ex) {
-//            System.out.println("Some exception occurs during division of file");
-//            return;
-//        }
+        try (SplitHelper splitHelper = new SplitHelper(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
+            (splitHelper.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
+        } catch (IOException ex) {
+            System.out.println("Some exception occurs during division of file");
+            return;
+        }
 
         try (MergeHelper mergeHelper = new MergeHelper(DIR_FOR_SORTED_BIG_FILE, FILE_SORTED)) {
             (mergeHelper.mergeInParallel(DIR_FOR_FILE_PARTS)).await();

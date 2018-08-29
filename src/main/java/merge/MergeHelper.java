@@ -13,7 +13,7 @@ public class MergeHelper implements AutoCloseable {
     private static final int AMOUNT_OF_THREADS = 2;
     private CountDownLatch countDownLatch = new CountDownLatch(AMOUNT_OF_THREADS);
     private AtomicBoolean flag = new AtomicBoolean(true);
-    private final List<String> buffer = new LinkedList<>();
+    private final LinkedList<String> buffer = new LinkedList<>();
 
     public MergeHelper(String dirPath, String fileName) {
         try {
@@ -48,7 +48,11 @@ public class MergeHelper implements AutoCloseable {
 
         // consumer
         Runnable consumer = () -> {
-            consumer();
+            try {
+                consumer();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         };
 
         (new Thread(producer)).start();
@@ -76,28 +80,24 @@ public class MergeHelper implements AutoCloseable {
         countDownLatch.countDown();
     }
 
-    private void consumer() {
+    private void consumer() throws IOException {
         List<String> temp = new ArrayList<>();
-        while (flag.get() || !buffer.isEmpty()) {
+        while (flag.get()) {
             synchronized (buffer) {
-                if (buffer.size() >= 1000 && flag.get()) {
-                    for (int i = 0; i < 1000; i++)
-                        temp.add(buffer.get(i));
-                    buffer.removeAll(temp);
-                } else if (!flag.get() && buffer.size() < 1000) {
-                    for (int i = 0; i < buffer.size(); i++)
-                        temp.add(buffer.get(i));
-                    buffer.removeAll(temp);
+                if (buffer.size() >= 1000) {
+                    temp.addAll(buffer);
+                    buffer.clear();
                 }
             }
-            try {
-                if (!temp.isEmpty())
-                    writeToFile(temp);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+            if (!temp.isEmpty())
+                writeToFile(temp);
             temp.clear();
         }
+
+        if (!buffer.isEmpty()) {
+            writeToFile(buffer);
+        }
+
         countDownLatch.countDown();
     }
 
