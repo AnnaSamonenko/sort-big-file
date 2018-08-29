@@ -9,12 +9,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MergeHelper implements AutoCloseable {
     private FileWriter fw;
-    private List<Wrapper> wrappers = new ArrayList<>();
+    private final List<Wrapper> wrappers = new ArrayList<>();
     private static final int AMOUNT_OF_THREADS = 2;
     private CountDownLatch countDownLatch = new CountDownLatch(AMOUNT_OF_THREADS);
     private AtomicBoolean flag = new AtomicBoolean(true);
-
-    private BlockingDeque<String> blockingDeque = new LinkedBlockingDeque<>();
+    private final List<String> buffer = new LinkedList<>();
 
     public MergeHelper(String dirPath, String fileName) {
         try {
@@ -54,41 +53,57 @@ public class MergeHelper implements AutoCloseable {
 
         (new Thread(producer)).start();
         (new Thread(consumer)).start();
-
         return countDownLatch;
     }
 
     private void producer() {
         Comparator<Wrapper> wrappersLineComparator = Comparator.comparing(Wrapper::getLine);
-
-        while (!wrappers.isEmpty()) {
-            if (blockingDeque.size() < 15) {
-                Collections.sort(wrappers, wrappersLineComparator);
-                Wrapper wr = wrappers.get(0);
-                blockingDeque.add(wr.getLine());
-                wr.nextLine();
-                if (wr.getLine() == null) {
-                    wr.close();
-                    wrappers.remove(0);
-                }
+        while (flag.get()) {
+            Collections.sort(wrappers, wrappersLineComparator);
+            Wrapper wr = wrappers.get(0);
+            synchronized (buffer) {
+                buffer.add(wr.getLine());
             }
+            wr.nextLine();
+            if (wr.getLine() == null) {
+                wr.close();
+                wrappers.remove(0);
+            }
+
+            if (wrappers.isEmpty())
+                flag.set(false);
         }
-        if (wrappers.isEmpty())
-            flag.set(false);
         countDownLatch.countDown();
     }
 
     private void consumer() {
-        while (flag.get() || !blockingDeque.isEmpty()) {
-            if (!blockingDeque.isEmpty()) {
-                try {
-                    writeToFile(blockingDeque.removeFirst());
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+        List<String> temp = new ArrayList<>();
+        while (flag.get() || !buffer.isEmpty()) {
+            synchronized (buffer) {
+                if (buffer.size() >= 1000 && flag.get()) {
+                    for (int i = 0; i < 1000; i++)
+                        temp.add(buffer.get(i));
+                    buffer.removeAll(temp);
+                } else if (!flag.get() && buffer.size() < 1000) {
+                    for (int i = 0; i < buffer.size(); i++)
+                        temp.add(buffer.get(i));
+                    buffer.removeAll(temp);
                 }
             }
+            try {
+                if (!temp.isEmpty())
+                    writeToFile(temp);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+            temp.clear();
         }
         countDownLatch.countDown();
+    }
+
+    private void writeToFile(List<String> lines) throws IOException {
+        for (String line : lines)
+            writeToFile(line);
     }
 
     private void writeToFile(String line) throws IOException {

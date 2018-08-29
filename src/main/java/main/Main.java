@@ -1,6 +1,7 @@
 package main;
 
 import merge.MergeHelper;
+import split.SplitHelper;
 
 import java.io.IOException;
 
@@ -19,8 +20,8 @@ public class Main {
 
         long startTime = System.nanoTime();
 
-//        try (SplitHelper fileHelperIP = new SplitHelper(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
-//            (fileHelperIP.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
+//        try (SplitHelper splitHelper = new SplitHelper(DIR_FOR_UNSORTED_BIG_FILE + FILE_UNSORTED)) {
+//            (splitHelper.runDivideAndSortInParallel(DIR_FOR_FILE_PARTS)).await();
 //        } catch (IOException ex) {
 //            System.out.println("Some exception occurs during division of file");
 //            return;
